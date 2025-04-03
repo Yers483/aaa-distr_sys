@@ -39,6 +39,16 @@ class ItemStorage:
         # like https://github.com/pressly/goose
         # YOUR CODE GOES HERE
 
+        async with self._pool.acquire() as conn:
+            await conn.execute('''
+                CREATE TABLE IF NOT EXISTS items (
+                    item_id INT PRIMARY KEY,
+                    user_id INT NOT NULL,
+                    title TEXT NOT NULL,
+                    description TEXT NOT NULL
+                )
+            ''')
+
     async def save_items(self, items: list[ItemEntry]) -> None:
         """
         Напишите код для вставки записей в таблицу items одним запросом, цикл
@@ -48,6 +58,18 @@ class ItemStorage:
         # sql injections https://habr.com/ru/articles/148151/.
         # YOUR CODE GOES HERE
 
+        if not items:
+            return
+
+        async with self._pool.acquire() as conn:
+            records = list(map(lambda item: (item.item_id, item.user_id, item.title, item.description), items))
+
+            await conn.copy_records_to_table(
+                'items',
+                records=records,
+                columns=['item_id', 'user_id', 'title', 'description']
+            )
+
     async def find_similar_items(
         self, user_id: int, title: str, description: str
     ) -> list[ItemEntry]:
@@ -55,3 +77,16 @@ class ItemStorage:
         Напишите код для поиска записей, имеющих указанные user_id, title и description.
         """
         # YOUR CODE GOES HERE
+        async with self._pool.acquire() as conn:
+            rows = await conn.fetch('''
+                SELECT item_id, user_id, title, description
+                FROM items
+                WHERE user_id = $1 AND title = $2 AND description = $3
+            ''', user_id, title, description)
+
+            return [ItemEntry(
+                item_id=row['item_id'],
+                user_id=row['user_id'],
+                title=row['title'],
+                description=row['description']
+            ) for row in rows]
