@@ -62,7 +62,14 @@ class ItemStorage:
             return
 
         async with self._pool.acquire() as conn:
-            records = list(map(lambda item: (item.item_id, item.user_id, item.title, item.description), items))
+            records = list(
+                map(lambda item: (
+                    item.item_id,
+                    item.user_id,
+                    item.title,
+                    item.description
+                ), items)
+            )
 
             await conn.copy_records_to_table(
                 'items',
@@ -74,7 +81,8 @@ class ItemStorage:
         self, user_id: int, title: str, description: str
     ) -> list[ItemEntry]:
         """
-        Напишите код для поиска записей, имеющих указанные user_id, title и description.
+        Напишите код для поиска записей,
+        имеющих указанные user_id, title и description.
         """
         # YOUR CODE GOES HERE
         async with self._pool.acquire() as conn:

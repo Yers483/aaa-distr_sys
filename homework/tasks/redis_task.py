@@ -24,12 +24,11 @@ class UsersByTitleStorage:
 
     async def find_users_by_title(self, title: str) -> list[int]:
         """
-        Напишите код для поиска уникальных user_id, имеющих хотя бы одно объявление
-        с заданным title.
+        Напишите код для поиска уникальных user_id,
+        имеющих хотя бы одно объявление с заданным title.
         """
         # YOUR CODE GOES HERE
 
         key = f"title:{title}"
-        # Get all members of the set and convert to integers
         user_ids = await self._client.smembers(key)
         return [int(user_id) for user_id in user_ids]

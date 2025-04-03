@@ -1,6 +1,7 @@
 import abc
 import asyncio
 import httpx
+import random
 
 
 class ResultsObserver(abc.ABC):
@@ -12,22 +13,29 @@ async def do_reliable_request(url: str, observer: ResultsObserver) -> None:
     """
     Одна из главных проблем распределённых систем - это ненадёжность связи.
 
-    Ваша задача заключается в том, чтобы таким образом исправить этот код, чтобы он
-    умел переживать возвраты ошибок и таймауты со стороны сервера, гарантируя
-    успешный запрос (в реальной жизни такая гарантия невозможна, но мы чуть упростим себе задачу).
+    Ваша задача заключается в том, чтобы таким образом исправить
+    этот код, чтобы он умел переживать возвраты ошибок и
+    таймауты со стороны сервера, гарантируя успешный запрос
+    (в реальной жизни такая гарантия невозможна,
+    но мы чуть упростим себе задачу).
 
-    Все успешно полученные результаты должны регистрироваться с помощью обсёрвера.
+    Все успешно полученные результаты
+    должны регистрироваться с помощью обсёрвера.
     """
 
     async with httpx.AsyncClient() as client:
-        # YOUR CODE GOES HERE
-        while True:
+        max_attempts = 20
+        for attempt in range(max_attempts):
             try:
-                response = await client.get(url)
+                response = await client.get(url, timeout=30.0)
                 response.raise_for_status()
-                data = response.read()
+                data = response.content
 
                 observer.observe(data)
                 return
-            except (httpx.HTTPError, httpx.TimeoutException):
-                await asyncio.sleep(1)
+            except (httpx.HTTPError, httpx.TimeoutException) as e:
+                if attempt == max_attempts - 1:
+                    raise e
+
+                delay = min(2 ** attempt, 60) * (0.5 + 0.5 * random.random())
+                await asyncio.sleep(delay)
